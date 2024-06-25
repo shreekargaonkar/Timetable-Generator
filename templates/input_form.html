@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Class Timetable Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            margin: auto;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: calc(100% - 10px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .faculty-input-group,
+        .division-input-group {
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Class Timetable Generator</h1>
+    <form action="/generate" method="POST">
+        <h2>Faculty Details</h2>
+        <label for="num_faculty">Number of Faculty Members:</label>
+        <input type="number" id="num_faculty" name="num_faculty" min="1" required><br>
+        <div id="faculty_inputs"></div>
+
+        <h2>Subjects and Divisions</h2>
+        <label for="divisions">Number of Divisions:</label>
+        <input type="number" id="divisions" name="divisions" min="1" required><br>
+        <div id="division_inputs"></div>
+        
+        <label for="time_quantum">Time Quantum (in minutes):</label>
+        <input type="number" id="time_quantum" name="time_quantum" min="1" required><br>
+        <button type="submit">Generate Timetable</button>
+    </form>
+
+    <script>
+        const numFacultyInput = document.getElementById("num_faculty");
+        const facultyInputsDiv = document.getElementById("faculty_inputs");
+        const divisionsInput = document.getElementById("divisions");
+        const divisionInputsDiv = document.getElementById("division_inputs");
+
+        numFacultyInput.addEventListener("change", function() {
+            facultyInputsDiv.innerHTML = ""; // Clear previous inputs
+            const numFaculty = parseInt(this.value);
+            for (let i = 1; i <= numFaculty; i++) {
+                const facultyInputGroup = document.createElement("div");
+                facultyInputGroup.className = "faculty-input-group";
+
+                const facultyNameInput = document.createElement("input");
+                facultyNameInput.type = "text";
+                facultyNameInput.id = `faculty_${i}_name`;
+                facultyNameInput.name = `faculty_${i}_name`;
+                facultyNameInput.placeholder = `Faculty Name ${i}`;
+                facultyNameInput.required = true;
+
+                const facultySubjectsLabel = document.createElement("label");
+                facultySubjectsLabel.htmlFor = `faculty_${i}_subjects`;
+                facultySubjectsLabel.innerHTML = `Number of subjects for Faculty ${i}:`;
+
+                const facultySubjectsInput = document.createElement("input");
+                facultySubjectsInput.type = "number";
+                facultySubjectsInput.id = `faculty_${i}_subjects`;
+                facultySubjectsInput.name = `faculty_${i}_subjects`;
+                facultySubjectsInput.min = 1;
+                facultySubjectsInput.required = true;
+
+                const facultySubjectsList = document.createElement("ul");
+
+                facultyInputGroup.appendChild(facultyNameInput);
+                facultyInputGroup.appendChild(facultySubjectsLabel);
+                facultyInputGroup.appendChild(facultySubjectsInput);
+                facultyInputGroup.appendChild(facultySubjectsList); // Placeholder for subject inputs (handled dynamically)
+
+                facultyInputsDiv.appendChild(facultyInputGroup);
+
+                const handleSubjectChange = (event) => {
+                    const numSubjects = parseInt(event.target.value);
+                    facultySubjectsList.innerHTML = ""; // Clear previous subject inputs
+                    for (let j = 1; j <= numSubjects; j++) {
+                        const subjectNameInput = document.createElement("input");
+                        subjectNameInput.type = "text";
+                        subjectNameInput.id = `faculty_${i}_subject_${j}`;
+                        subjectNameInput.name = `faculty_${i}_subject_${j}`;
+                        subjectNameInput.placeholder = `Subject ${j}`;
+                        subjectNameInput.required = true;
+                        const listItem = document.createElement("li");
+                        listItem.appendChild(subjectNameInput);
+                        facultySubjectsList.appendChild(listItem);
+                    }
+                };
+
+                facultySubjectsInput.addEventListener("change", handleSubjectChange);
+            }
+        });
+
+        divisionsInput.addEventListener("change", function() {
+            divisionInputsDiv.innerHTML = ""; // Clear previous inputs
+            const numDivisions = parseInt(this.value);
+            for (let i = 1; i <= numDivisions; i++) {
+                const divisionInputGroup = document.createElement("div");
+                divisionInputGroup.className = "division-input-group";
+
+                const divisionLabel = document.createElement("label");
+                divisionLabel.htmlFor = `division_${i}_classroom`;
+                divisionLabel.innerHTML = `Classroom for Division ${i}:`;
+
+                const divisionClassroomInput = document.createElement("input");
+                divisionClassroomInput.type = "text";
+                divisionClassroomInput.id = `division_${i}_classroom`;
+                divisionClassroomInput.name = `division_${i}_classroom`;
+                divisionClassroomInput.placeholder = `Classroom ${i}`;
+                divisionClassroomInput.required = true;
+
+                divisionInputGroup.appendChild(divisionLabel);
+                divisionInputGroup.appendChild(divisionClassroomInput);
+                divisionInputsDiv.appendChild(divisionInputGroup);
+            }
+        });
+    </script>
+</body>
+</html>
