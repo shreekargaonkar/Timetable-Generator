@@ -4,7 +4,7 @@ from threading import Semaphore
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for session management
+app.secret_key = 'your_secret_key'  
 
 MAX_DAYS = 7
 MAX_NAME_LENGTH = 50
