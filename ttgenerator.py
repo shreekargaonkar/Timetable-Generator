@@ -64,74 +64,75 @@ def generate_class_name(subject, faculty, division):
 # Round robin scheduling function
 def round_robin_scheduling(professors, subjects, divisions, time_quantum):
     timetables = {}
-    classrooms = {}  # Dictionary to store classrooms for each division
+    classrooms = {}
     faculty_semaphores = {faculty: Semaphore(value=1) for faculty in professors}
 
-    # Ask for classrooms for each division
     for division in range(1, divisions + 1):
         classroom = input(f"Enter the classroom for Division {division}: ")
         classrooms[division] = classroom
 
-    # Define time slots for each day, excluding break times
     time_slots = [
-        # Sunday (Holiday)
         [],
-        # Monday to Saturday (excluding break times)
-        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 ", "2:00 PM"],
-        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 ", "2:00 PM"],
-        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 ", "2:00 PM"],
-        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 ", "2:00 PM"],
-        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 ", "2:00 PM"],
-        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM"]  # Half Day (Saturday)
+        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 PM", "2:00 PM"],
+        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 PM", "2:00 PM"],
+        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 PM", "2:00 PM"],
+        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 PM", "2:00 PM"],
+        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM", "1:15 PM", "2:00 PM"],
+        ["8:00 AM", "9:00 AM", "10:00 AM", "11:15 AM", "12:15 PM"]
     ]
-
-    # Initialize counters for each faculty member
-    faculty_counters = {faculty_name: 0 for faculty_name in professors}
 
     for division in range(1, divisions + 1):
         timetable = Timetable()
         timetables[division] = timetable
 
-    for day in range(MAX_DAYS):
-        if day == 0:  # Sunday (Holiday)
-            continue
-        for time_slot in range(len(time_slots[day])):
-            for division in range(1, divisions + 1):
-                # Randomly select a faculty member from the list of professors
-                faculty_name = random.choice(professors)
-                if not faculty_semaphores[faculty_name].acquire(blocking=False):
-                    continue  # Skip this faculty if already assigned a class
+    def assign_class(division, day, slot, faculty_name):
+        if not faculty_semaphores[faculty_name].acquire(blocking=False):
+            return False
 
-                # Randomly select a subject from the list associated with the faculty
-                subject = random.choice(subjects[faculty_name])
+        subject = random.choice(subjects[faculty_name])
+        class_name = generate_class_name(subject, faculty_name, division)
 
-                # Generate a unique class name
-                class_name = generate_class_name(subject, faculty_name, division)
+        for other_division, other_timetable in timetables.items():
+            if other_division != division:
+                for other_class in other_timetable.classes[day]:
+                    if other_class.time == time_slots[day][slot] and other_class.subject == subject.name:
+                        faculty_semaphores[faculty_name].release()
+                        return False
 
-                # Check if any other division has the same class at the same time
-                conflict = False
-                for other_division, other_timetable in timetables.items():
-                    if other_division != division:
-                        for other_class in other_timetable.classes[day]:
-                            if other_class.time == time_slots[day][time_slot] and other_class.subject == subject.name:
-                                conflict = True
-                                break
-                if conflict:
-          # Do not release semaphore if conflict
-                    continue  # Skip this faculty and move on to the next
+        class_ = Class(class_name, time_slots[day][slot], faculty_name, subject.name, division, classrooms[division])
+        timetables[division].classes[day].append(class_)
+        timetables[division].num_classes[day] += 1
+        faculty_semaphores[faculty_name].release()
+        return True
 
-        # ... rest of the code for creating class and adding it to timetable ...
+    # First pass: Diagonal assignment
+    for division in range(1, divisions + 1):
+        for faculty_name in professors:
+            start_day = random.randint(1, MAX_DAYS - 1)
+            start_slot = random.randint(0, len(time_slots[1]) - 1)
+            day, slot = start_day, start_slot
+            
+            for _ in range(MAX_DAYS - 1):
+                if day == 0:
+                    day = 1
+                    continue
+                
+                if assign_class(division, day, slot, faculty_name):
+                    day = (day % (MAX_DAYS - 1)) + 1
+                    slot = (slot + 1) % len(time_slots[day])
+                else:
+                    # If can't assign, try next slot
+                    slot = (slot + 1) % len(time_slots[day])
 
-                faculty_semaphores[faculty_name].release()
-
-                # Create the class and add it to the timetable
-                class_ = Class(class_name, time_slots[day][time_slot], faculty_name, subject.name, division, classrooms[division])
-                timetables[division].classes[day].append(class_)
-                timetables[division].num_classes[day] += 1
-
-                # Increment the counter for the assigned faculty member
-                faculty_counters[faculty_name] += 1
-                faculty_semaphores[faculty_name].release()  # Release semaphore after assignme
+    # Second pass: Fill empty slots
+    for division in range(1, divisions + 1):
+        for day in range(1, MAX_DAYS):
+            for slot in range(len(time_slots[day])):
+                if not any(class_.time == time_slots[day][slot] for class_ in timetables[division].classes[day]):
+                    # Try to assign a class to this empty slot
+                    for faculty_name in random.sample(professors, len(professors)):
+                        if assign_class(division, day, slot, faculty_name):
+                            break
 
     return timetables
 
